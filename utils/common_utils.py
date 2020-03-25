@@ -1,24 +1,41 @@
+# 常用工具
 import torch
-import torch.nn as nn
 import torchvision
-import sys
 import cv2
-import numpy as np
+import time
+'''
+    # Python Imaging Library，已经是Python平台实际上的图像处理标准库了
+    # 原始PIL只支持到python 2.7，开源社区在PIL的基础上创建了兼容的版本，名字叫Pillow
+    # 支持python 3.x，我们可以直接安装Pillow
+    # Image模块是PIL中最重要的模块，它有一个类叫做image，与模块名称相同
+'''
 from PIL import Image
-import PIL
 import numpy as np
-
-
 import matplotlib.pyplot as plt
-import random
+
+
+def exe_time(func):
+    def new_func(*args, **args2):
+        t0 = time.time()
+        print("@%s, {%s} start" % (time.strftime("%X", time.localtime()), func.__name__))
+        back = func(*args, **args2)
+        print("@%s, {%s} end" % (time.strftime("%X", time.localtime()), func.__name__))
+        print("@%.3fs taken for {%s}" % (time.time() - t0, func.__name__))
+        return back
+    return new_func
+
 
 def crop_image(img, d=32):
-    '''Make dimensions divisible by `d`'''
-    imgsize = img.shape
+    '''
+        Make dimensions divisible by d
+        :param img:
+        :param d:
+        :return:
+    '''
 
+    imgsize = img.shape
     new_size = (imgsize[0] - imgsize[0] % d,
                 imgsize[1] - imgsize[1] % d)
-
     bbox = [
             int((imgsize[0] - new_size[0])/2),
             int((imgsize[1] - new_size[1])/2),
@@ -26,8 +43,9 @@ def crop_image(img, d=32):
             int((imgsize[1] + new_size[1])/2),
     ]
 
-    img_cropped = img[0:new_size[0],0:new_size[1],:]
+    img_cropped = img[0:new_size[0], 0:new_size[1], :]
     return img_cropped
+
 
 def get_params(opt_over, net, net_input, downsampler=None):
     '''Returns parameters that we want to optimize over.
@@ -90,93 +108,116 @@ def plot_image_grid(images_np, nrow =8, factor=1, interpolation='lanczos'):
     return grid
 
 def load(path):
-    """Load PIL image."""
+    """
+    Load PIL image
+    对于彩色图像，不管其图像格式是PNG，还是BMP，或者JPG，在PIL中，使用Image模块的open()函数打开后，返回的图像对象的模式都是"RGB"
+    而对于灰度图像，不管其图像格式是PNG，还是BMP，或者JPG，打开后，其模式为"L"
+    PIL中有九种不同模式，分别为1，L，P，RGB，RGBA，CMYK，YCbCr，I，F
+    具体请参见：https://blog.csdn.net/icamera0/article/details/50843172
+    """
     img = Image.open(path)
-
-
-
     return img
 
-def get_image(path, imsize=-1):
-    """Load an image and resize to a cpecific size. 
 
+# 0.006s taken for {get_image}
+def get_image(path, imsize=-1):
+    """
+    Load an image and resize to a specific size.
     Args: 
         path: path to image
         imsize: tuple or scalar with dimensions; -1 for `no resize`
     """
-    img = load(path)
-
+    img = load(path)  # <PIL.PngImagePlugin.PngImageFile image mode=L size=255x255 at 0x1E8D36C94A8>
     if isinstance(imsize, int):
         imsize = (imsize, imsize)
 
-    if imsize[0]!= -1 and img.size != imsize:
+    if imsize[0] != -1 and img.size != imsize:
         if imsize[0] > img.size[0]:
             img = img.resize(imsize, Image.BICUBIC)
         else:
             img = img.resize(imsize, Image.ANTIALIAS)
-
+            print("img.resize(imsize, Image.ANTIALIAS) --->>> ", img)
+    # Converts image in PIL format to np.array
     img_np = pil_to_np(img)
 
     return img, img_np
 
-
-
 def fill_noise(x, noise_type):
-    """Fills tensor `x` with noise of type `noise_type`."""
-    #torch.manual_seed(0)
+    """
+    Fills tensor `x` with noise of type `noise_type`
+    """
+    # 相当于直接在原tensors上改变，无需返回
     if noise_type == 'u':
-        x.uniform_()
+        x.uniform_()  # 从连续均匀分布中采样的数字，均匀分布
     elif noise_type == 'n':
-        x.normal_() 
+        x.normal_()  # 正态分布
     else:
         assert False
 
+
+# 0.000s taken for {get_noise}
 def get_noise(input_depth, method, spatial_size, noise_type='u', var=1./10):
-    """Returns a pytorch.Tensor of size (1 x `input_depth` x `spatial_size[0]` x `spatial_size[1]`) 
+    """
+    Returns a pyTorch Tensor of size (1 x `input_depth` x `spatial_size[0]` x `spatial_size[1]`)
     initialized in a specific way.
+    meshgrid函数就是用两个坐标轴上的点在平面上画网格(传入的参数是两个的时候)
     Args:
         input_depth: number of channels in the tensor
-        method: `noise` for fillting tensor with noise; `meshgrid` for np.meshgrid
+        method: `noise` for filling tensor with noise; `meshgrid` for np.meshgrid
         spatial_size: spatial size of the tensor to initialize
-        noise_type: 'u' for uniform; 'n' for normal
-        var: a factor, a noise will be multiplicated by. Basically it is standard deviation scaler. 
+        noise_type: 'u' for uniform; 均匀分布 'n' for normal 正态分布
+        var: a factor, a noise will be multiplicated by. Basically it is standard deviation scaler.
     """
     if isinstance(spatial_size, int):
+        # 如果spatial_size是一个整数的话(没有给出维度)，就进行转换
         spatial_size = (spatial_size, spatial_size)
+
     if method == 'noise':
         shape = [1, input_depth, spatial_size[0], spatial_size[1]]
+        # 制作张量
         net_input = torch.zeros(shape)
-        
+        # 填充噪声，图像的话
         fill_noise(net_input, noise_type)
-        net_input *= var            
-    elif method == 'meshgrid': 
+        net_input *= var
+    elif method == 'meshgrid':
         assert input_depth == 2
-        X, Y = np.meshgrid(np.arange(0, spatial_size[1])/float(spatial_size[1]-1), np.arange(0, spatial_size[0])/float(spatial_size[0]-1))
+        X, Y = np.meshgrid(np.arange(0, spatial_size[1]) / float(spatial_size[1] - 1), np.arange(0, spatial_size[0]) / float(spatial_size[0] - 1))
         meshgrid = np.concatenate([X[None, :], Y[None, :]])
         net_input = np_to_torch(meshgrid)
     else:
         assert False
-        
+
     return net_input
 
+
 def pil_to_np(img_PIL):
-    '''Converts image in PIL format to np.array.
-    
-    From W x H x C [0...255] to C x W x H [0..1]
     '''
-    ar = np.array(img_PIL)
-
+        Converts image in PIL format to np.array.
+        From W x H x C [0...255] to C x W x H [0..1]
+        当使用PIL.Image.open()打开图片后，如果要使用img.shape函数，需要先将image形式转换成array数组
+        img = numpy.array(im)
+    '''
+    ar = np.array(img_PIL)  # ar.shape (255, 255)
+    # 这一步在做什么
     if len(ar.shape) == 3:
-        ar = ar.transpose(2,0,1)
+        # transpose在不指定参数是默认是矩阵转置
+        '''
+        详情请参见：
+        https://blog.csdn.net/u012762410/article/details/78912667?depth_1-utm_source=distribute.pc_relevant.none-task&utm_source=distribute.pc_relevant.none-task
+        '''
+        ar = ar.transpose(2, 0, 1)
     else:
-        ar = ar[None, ...]
+        ar = ar[None, ...]  # ar.shape (1, 255, 255)
 
+    # PIL图像对象，其type都是np.array，array里的元素类型(dtype)均为np.uint8
+    # numpy.astype()方法改变元素类型(可以变成np.float32)
     return ar.astype(np.float32) / 255.
 
+
 def np_to_pil(img_np): 
-    '''Converts image in np.array format to PIL image.
-    
-    From C x W x H [0..1] to  W x H x C [0...255]
+    '''
+        Converts image in np.array format to PIL image.
+        From C x W x H [0..1] to  W x H x C [0...255]
     '''
     ar = np.clip(img_np*255,0,255).astype(np.uint8)
     
@@ -290,5 +331,4 @@ def readimg(path_to_image):
     y, cr, cb = cv2.split(x)
 
     return img, y, cb, cr
-
 

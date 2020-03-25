@@ -6,6 +6,7 @@ from math import sqrt
 import torch.nn.init
 from .common import *
 
+
 class ResidualSequential(nn.Sequential):
     def __init__(self, *args):
         super(ResidualSequential, self).__init__(*args)

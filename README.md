@@ -45,7 +45,6 @@ python selfdeblur_nonblind.py --data_path path_to_blurry --save_path path_to_est
 ```bash
 python selfdeblur_ycbcr.py # Deblur several color images in `./datasets/real/`.
 ```
-
 _*In current SelfDeblur code, TV regularization has been removed. The improved code is more robust to blur kernel estimation. But for some images with high level noises and non-uniform blurry images, the deblurring results may suffer from ringing effects due to our uniform convolution-based loss function. In this case, adding TV regularization to SelfDeblur loss function or running another nonblind deblur method may be an choice._
 
 
@@ -68,7 +67,7 @@ _*Actually, the trained SelfDeblur models can be regarded as an optimization sol
 
 
 All the deblurring results are also available. Please read [results/levin/readme.docx](/results/levin/readme.docx) and [results/lai/readme.docx](results/lai/readme.docx) for the details. 
-You can place the downloaded results into `./results/`, and directly compute all the [evaluation metrics](statistic/) in this paper.  
+
 
 ### 2. Evaluation metrics
 

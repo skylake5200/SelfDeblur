@@ -2,6 +2,7 @@ import numpy as np
 import torch
 import torch.nn as nn 
 
+
 class Downsampler(nn.Module):
     '''
         http://www.realitypixels.com/turk/computergraphics/ResamplingFilters.pdf
@@ -70,6 +71,7 @@ class Downsampler(nn.Module):
         self.x = x
         return self.downsampler_(x)
 
+
 class Blurconv(nn.Module):
     '''
         http://www.realitypixels.com/turk/computergraphics/ResamplingFilters.pdf
@@ -130,6 +132,7 @@ class Blurconv2(nn.Module):
         self.preserve_size = preserve_size
         self.blurconv = nn.Conv2d(self.n_planes, self.n_planes, kernel_size=k_size, stride=1, padding=0, bias=False)
 #        self.blurconv.weight.data[:] /= self.blurconv.weight.data.sum()
+
     def forward(self, input):
         if self.preserve_size:
             pad = int((self.k_size - 1.) / 2.) 

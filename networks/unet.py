@@ -4,6 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from .common import * 
 
+
 class ListModule(nn.Module):
     def __init__(self, *args):
         super(ListModule, self).__init__()
@@ -28,6 +29,7 @@ class ListModule(nn.Module):
 
     def __len__(self):
         return len(self._modules)
+
 
 class UNet(nn.Module):
     '''
@@ -118,13 +120,12 @@ class UNet(nn.Module):
         else:
             up_= down4
 
-        up4= self.up4(up_, down3)
-        up3= self.up3(up4, down2)
-        up2= self.up2(up3, down1)
-        up1= self.up1(up2, in64)
+        up4 = self.up4(up_, down3)
+        up3 = self.up3(up4, down2)
+        up2 = self.up2(up3, down1)
+        up1 = self.up1(up2, in64)
 
         return self.final(up1)
-
 
 
 class unetConv2(nn.Module):
@@ -144,6 +145,7 @@ class unetConv2(nn.Module):
                                        nn.ReLU(),)
             self.conv2= nn.Sequential(conv(out_size, out_size, 3, bias=need_bias, pad=pad),
                                        nn.ReLU(),)
+
     def forward(self, inputs):
         outputs= self.conv1(inputs)
         outputs= self.conv2(outputs)
